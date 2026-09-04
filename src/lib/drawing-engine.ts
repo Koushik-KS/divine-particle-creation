@@ -37,6 +37,8 @@ export class KrishnaEngine {
   private cx = 0;
   private cy = 0;
   private figureH = 0;
+  private figureW = 0;
+  private underlay: HTMLCanvasElement | null = null;
   private destroyed = false;
   private ro: ResizeObserver | null = null;
 
