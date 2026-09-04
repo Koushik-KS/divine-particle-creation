@@ -21,7 +21,7 @@ type Particle = {
   amp: number;
 };
 
-const MAX_PARTICLES = 16000;
+const MAX_PARTICLES = 22000;
 const FORM_END = 12.5; // seconds
 
 const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
@@ -183,7 +183,7 @@ export class KrishnaEngine {
 
     ctx.globalCompositeOperation = "lighter";
 
-    const glowBoost = 0.14 + clamp01((t - 10.5) / 2.5) * 0.14;
+    const glowBoost = 0.2 + clamp01((t - 10.5) / 2.5) * 0.16;
     const settled = t > FORM_END;
 
     for (let i = 0; i < this.particles.length; i++) {
