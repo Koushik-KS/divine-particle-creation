@@ -183,7 +183,7 @@ export class KrishnaEngine {
 
     ctx.globalCompositeOperation = "lighter";
 
-    const glowBoost = 0.32 + clamp01((t - 10.5) / 2.5) * 0.33;
+    const glowBoost = 0.14 + clamp01((t - 10.5) / 2.5) * 0.14;
     const settled = t > FORM_END;
 
     for (let i = 0; i < this.particles.length; i++) {
