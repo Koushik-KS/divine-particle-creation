@@ -37,6 +37,8 @@ export class KrishnaEngine {
   private cx = 0;
   private cy = 0;
   private figureH = 0;
+  private figureW = 0;
+  private underlay: HTMLCanvasElement | null = null;
   private destroyed = false;
   private ro: ResizeObserver | null = null;
 
@@ -68,19 +70,33 @@ export class KrishnaEngine {
     this.cx = this.canvas.width / 2;
     this.cy = this.canvas.height / 2;
 
-    const targetH = h * (w < 640 ? 0.68 : 0.74) * this.dpr;
+    const targetH = h * (w < 640 ? 0.62 : 0.68) * this.dpr;
     const targetW = (targetH * this.img.width) / this.img.height;
-    const maxW = this.canvas.width * 0.92;
+    const maxW = this.canvas.width * 0.9;
     const scale = targetW > maxW ? maxW / targetW : 1;
     this.figureH = targetH * scale;
-    this.sample(targetW * scale, targetH * scale);
+    this.figureW = targetW * scale;
+    this.buildUnderlay(this.figureW, this.figureH);
+    this.sample(this.figureW, this.figureH);
+  }
+
+  /** Soft, dim version of the artwork drawn beneath the particles so the
+   *  final figure reads as a continuous silhouette instead of broken dots. */
+  private buildUnderlay(w: number, h: number) {
+    const c = document.createElement("canvas");
+    c.width = Math.max(1, Math.floor(w));
+    c.height = Math.max(1, Math.floor(h));
+    const cx = c.getContext("2d")!;
+    cx.filter = `blur(${Math.max(1, h * 0.004)}px)`;
+    cx.drawImage(this.img!, 0, 0, c.width, c.height);
+    this.underlay = c;
   }
 
   private sample(w: number, h: number) {
     const img = this.img!;
     const off = document.createElement("canvas");
-    // sample resolution: enough detail without heavy cost
-    const sw = Math.min(440, Math.floor(w));
+    // sample resolution: high enough for facial detail, still cheap
+    const sw = Math.min(640, Math.max(320, Math.floor(w)));
     const sh = Math.floor((sw * img.height) / img.width);
     off.width = sw;
     off.height = sh;
@@ -97,23 +113,26 @@ export class KrishnaEngine {
     const diag = Math.hypot(this.canvas.width, this.canvas.height);
 
     for (let y = 0; y < sh; y++) {
+      const vertical = y / sh;
+      // head / face / crown zone gets the densest, smallest particles
+      const detail = vertical < 0.34;
       for (let x = 0; x < sw; x++) {
         const i = (y * sw + x) * 4;
         const r = data[i]!;
         const g = data[i + 1]!;
         const b = data[i + 2]!;
         const lum = (r * 0.299 + g * 0.587 + b * 0.114) / 255;
-        if (lum < 0.22) continue;
-        if (Math.random() > Math.min(1, 0.2 + lum * 0.6)) continue;
+        if (lum < 0.12) continue;
+        const keep = Math.min(1, (detail ? 0.72 : 0.4) + lum * 0.6);
+        if (Math.random() > keep) continue;
 
         const tx = left + (x + Math.random()) * px;
         const ty = top + (y + Math.random()) * py;
         const ang = Math.random() * Math.PI * 2;
         const rad = diag * (0.25 + Math.random() * 0.7);
 
-        // progressive reveal: crown/face first, then body, then edges
-        const vertical = y / sh;
-        const delay = 0.8 + vertical * 6.2 + Math.random() * 3.4;
+        // timeline: silhouette -> head/upper body -> flute/lower body
+        const delay = 0.6 + vertical * 6.6 + (1 - lum) * 1.6 + Math.random() * 2.2;
 
         found.push({
           x: this.cx + Math.cos(ang) * rad,
@@ -125,11 +144,14 @@ export class KrishnaEngine {
           r,
           g,
           b,
-          size: (0.28 + lum * 0.7 + Math.random() * 0.35) * this.dpr,
+          size:
+            (detail
+              ? 0.22 + lum * 0.45 + Math.random() * 0.2
+              : 0.32 + lum * 0.8 + Math.random() * 0.4) * this.dpr,
           delay,
-          dur: 2.2 + Math.random() * 2.6,
+          dur: 2 + Math.random() * 2.4,
           ph: Math.random() * Math.PI * 2,
-          amp: (0.6 + Math.random() * 1.8) * this.dpr,
+          amp: (detail ? 0.2 + Math.random() * 0.5 : 0.4 + Math.random() * 1.1) * this.dpr,
         });
       }
     }
@@ -166,15 +188,15 @@ export class KrishnaEngine {
     ctx.fillRect(0, 0, W, H);
 
     // golden aura, ramps in late
-    const auraP = clamp01((t - 7.5) / 4.5);
+    const auraP = clamp01((t - 8) / 4.5);
     if (auraP > 0) {
       const R = this.figureH * 0.62;
-      const grad = ctx.createRadialGradient(this.cx, this.cy, R * 0.15, this.cx, this.cy, R);
+      const grad = ctx.createRadialGradient(this.cx, this.cy, R * 0.12, this.cx, this.cy, R);
       const pulse = 1 + Math.sin(t * 1.1) * 0.06;
-      const a = auraP * 0.42 * pulse;
-      grad.addColorStop(0, `rgba(255,200,80,${a * 0.55})`);
-      grad.addColorStop(0.45, `rgba(255,160,40,${a * 0.28})`);
-      grad.addColorStop(0.78, `rgba(190,70,190,${a * 0.14})`);
+      const a = auraP * 0.5 * pulse;
+      grad.addColorStop(0, `rgba(255,200,90,${a * 0.5})`);
+      grad.addColorStop(0.45, `rgba(255,160,40,${a * 0.26})`);
+      grad.addColorStop(0.8, `rgba(170,60,180,${a * 0.1})`);
       grad.addColorStop(1, "rgba(0,0,0,0)");
       ctx.globalCompositeOperation = "lighter";
       ctx.fillStyle = grad;
@@ -183,7 +205,21 @@ export class KrishnaEngine {
 
     ctx.globalCompositeOperation = "lighter";
 
-    const glowBoost = 0.2 + clamp01((t - 10.5) / 2.5) * 0.16;
+    // faint continuous glow layer under the particles (never a flat image)
+    const under = clamp01((t - 9) / 3.5) * 0.3;
+    if (this.underlay && under > 0.005) {
+      ctx.globalAlpha = under * (0.94 + Math.sin(t * 0.8) * 0.06);
+      ctx.drawImage(
+        this.underlay,
+        this.cx - this.figureW / 2,
+        this.cy - this.figureH / 2,
+        this.figureW,
+        this.figureH,
+      );
+      ctx.globalAlpha = 1;
+    }
+
+    const glowBoost = 0.2 + clamp01((t - 10) / 3) * 0.3;
     const settled = t > FORM_END;
 
     for (let i = 0; i < this.particles.length; i++) {
@@ -201,8 +237,8 @@ export class KrishnaEngine {
         y = p.ty + Math.cos(t * 0.7 + p.ph * 1.3) * p.amp;
       }
 
-      const tw = 0.75 + 0.25 * Math.sin(t * 2.4 + p.ph);
-      const alpha = clamp01(e * 0.35 + e * e * 0.75) * tw * glowBoost;
+      const tw = 0.85 + 0.15 * Math.sin(t * 2.4 + p.ph);
+      const alpha = clamp01(e * 0.35 + e * e * 0.85) * tw * glowBoost;
       if (alpha <= 0.01) continue;
 
       const s = p.size * (0.7 + e * 0.5);
@@ -211,7 +247,7 @@ export class KrishnaEngine {
       ctx.arc(x, y, s, 0, Math.PI * 2);
       ctx.fill();
 
-      // sparse halo for the brightest particles
+      // sparse halo for the brightest outer particles
       if (p.size > 0.95 * this.dpr && (i & 15) === 0) {
         ctx.fillStyle = `rgba(${p.r},${Math.min(255, p.g + 30)},${p.b},${Math.min(0.05, alpha * 0.09)})`;
         ctx.beginPath();
@@ -220,6 +256,7 @@ export class KrishnaEngine {
       }
     }
   }
+
 
   destroy() {
     this.destroyed = true;
