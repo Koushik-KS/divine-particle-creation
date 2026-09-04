@@ -80,7 +80,7 @@ export class KrishnaEngine {
     const img = this.img!;
     const off = document.createElement("canvas");
     // sample resolution: enough detail without heavy cost
-    const sw = Math.min(300, Math.floor(w));
+    const sw = Math.min(440, Math.floor(w));
     const sh = Math.floor((sw * img.height) / img.width);
     off.width = sw;
     off.height = sh;
@@ -104,7 +104,7 @@ export class KrishnaEngine {
         const b = data[i + 2]!;
         const lum = (r * 0.299 + g * 0.587 + b * 0.114) / 255;
         if (lum < 0.22) continue;
-        if (Math.random() > Math.min(1, 0.28 + lum * 0.9)) continue;
+        if (Math.random() > Math.min(1, 0.2 + lum * 0.6)) continue;
 
         const tx = left + (x + Math.random()) * px;
         const ty = top + (y + Math.random()) * py;
@@ -125,7 +125,7 @@ export class KrishnaEngine {
           r,
           g,
           b,
-          size: (0.6 + lum * 1.5 + Math.random() * 0.7) * this.dpr,
+          size: (0.28 + lum * 0.7 + Math.random() * 0.35) * this.dpr,
           delay,
           dur: 2.2 + Math.random() * 2.6,
           ph: Math.random() * Math.PI * 2,
@@ -183,7 +183,7 @@ export class KrishnaEngine {
 
     ctx.globalCompositeOperation = "lighter";
 
-    const glowBoost = 0.55 + clamp01((t - 10.5) / 2.5) * 0.75;
+    const glowBoost = 0.32 + clamp01((t - 10.5) / 2.5) * 0.33;
     const settled = t > FORM_END;
 
     for (let i = 0; i < this.particles.length; i++) {
@@ -212,10 +212,10 @@ export class KrishnaEngine {
       ctx.fill();
 
       // sparse halo for the brightest particles
-      if (p.size > 1.8 * this.dpr && (i & 3) === 0) {
-        ctx.fillStyle = `rgba(${p.r},${Math.min(255, p.g + 30)},${p.b},${Math.min(0.16, alpha * 0.16)})`;
+      if (p.size > 0.95 * this.dpr && (i & 15) === 0) {
+        ctx.fillStyle = `rgba(${p.r},${Math.min(255, p.g + 30)},${p.b},${Math.min(0.05, alpha * 0.09)})`;
         ctx.beginPath();
-        ctx.arc(x, y, s * 3.4, 0, Math.PI * 2);
+        ctx.arc(x, y, s * 4.2, 0, Math.PI * 2);
         ctx.fill();
       }
     }
