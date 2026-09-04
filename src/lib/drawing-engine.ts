@@ -99,9 +99,9 @@ export class KrishnaEngine {
     for (let y = 0; y < sh; y++) {
       for (let x = 0; x < sw; x++) {
         const i = (y * sw + x) * 4;
-        const r = data[i];
-        const g = data[i + 1];
-        const b = data[i + 2];
+        const r = data[i]!;
+        const g = data[i + 1]!;
+        const b = data[i + 2]!;
         const lum = (r * 0.299 + g * 0.587 + b * 0.114) / 255;
         if (lum < 0.22) continue;
         if (Math.random() > Math.min(1, 0.28 + lum * 0.9)) continue;
@@ -138,7 +138,7 @@ export class KrishnaEngine {
     if (found.length > MAX_PARTICLES) {
       for (let i = found.length - 1; i > 0; i--) {
         const j = (Math.random() * (i + 1)) | 0;
-        [found[i], found[j]] = [found[j], found[i]];
+        [found[i], found[j]] = [found[j]!, found[i]!];
       }
       found.length = MAX_PARTICLES;
     }
@@ -187,7 +187,7 @@ export class KrishnaEngine {
     const settled = t > FORM_END;
 
     for (let i = 0; i < this.particles.length; i++) {
-      const p = this.particles[i];
+      const p = this.particles[i]!;
       const local = (t - p.delay) / p.dur;
       if (local <= 0) continue;
       const e = easeOutCubic(clamp01(local));
