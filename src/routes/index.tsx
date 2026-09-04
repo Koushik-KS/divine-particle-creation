@@ -1,24 +1,54 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useEffect, useRef, useState } from "react";
+import { KrishnaEngine } from "@/lib/drawing-engine";
 
-// No head() here: the home route inherits title/description/og/twitter from
-// __root.tsx, and ships no og:image so serve-time hosting can inject the
-// project's social preview (explicit og:image or latest screenshot).
 export const Route = createFileRoute("/")({
+  head: () => ({
+    meta: [
+      { title: "Krishna — Neon Particle Artwork" },
+      {
+        name: "description",
+        content:
+          "A cinematic particle animation where Lord Krishna forms from thousands of glowing gold, white and violet neon particles.",
+      },
+      { property: "og:title", content: "Krishna — Neon Particle Artwork" },
+      {
+        property: "og:description",
+        content:
+          "Watch Lord Krishna draw himself from thousands of glowing neon particles in a dark, cinematic canvas animation.",
+      },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
+    ],
+  }),
   component: Index,
 });
 
-// IMPORTANT: Replace this placeholder. See ./README.md for routing conventions.
 function Index() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const engineRef = useRef<KrishnaEngine | null>(null);
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    if (!canvasRef.current) return;
+    const engine = new KrishnaEngine(canvasRef.current);
+    engineRef.current = engine;
+    engine.init("/images/krishna.png").then(() => setReady(true));
+    return () => engine.destroy();
+  }, []);
+
   return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
-    >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
-      />
-    </div>
+    <main className="relative h-screen w-screen overflow-hidden bg-black">
+      <h1 className="sr-only">Krishna neon particle artwork</h1>
+      <canvas ref={canvasRef} className="block h-full w-full" />
+      <button
+        type="button"
+        onClick={() => engineRef.current?.replay()}
+        disabled={!ready}
+        className="absolute bottom-6 left-1/2 -translate-x-1/2 rounded-full border border-amber-300/25 bg-amber-200/5 px-5 py-1.5 text-[11px] uppercase tracking-[0.3em] text-amber-200/70 backdrop-blur-sm transition hover:border-amber-200/50 hover:text-amber-100 disabled:opacity-30"
+      >
+        Replay
+      </button>
+    </main>
   );
 }
